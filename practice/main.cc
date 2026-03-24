@@ -1,90 +1,39 @@
 #include <iostream>
-#include <cstdlib>
-#include <cstdio>
-#include <immintrin.h>
-#include <vector>
-#include <sys/random.h>
+#include <cstdlib>      // rand()
+#include <ctime>        // time()
+#include <random>       // mt19937, uniform_int_distribution
+#include <chrono>       // seed cu nanosec
+#include <thread>       // pentru thread id
 
-using namespace std;
+int main() {
+    // 1️⃣ rand() + srand(time)
+    srand(time(nullptr));
+    int r1 = rand() % 100;
+    std::cout << "Random 1: " << r1 << "\n";
 
-int get_random_std()
-{
-    return rand() % 200;
-}
+    // 2️⃣ <random> mt19937 + random_device
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 99);
+    int r2 = dis(gen);
+    std::cout << "Random 2: " << r2 << "\n";
 
-int get_random_rdrand()
-{
-    unsigned int ret;
+    // 3️⃣ chrono nanosec seed + mt19937
+    auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    std::mt19937 gen3(seed);
+    std::uniform_int_distribution<> dis3(0, 99);
+    int r3 = dis3(gen3);
+    std::cout << "Random 3: " << r3 << "\n";
 
-    int rc = _rdrand32_step(&ret);
+    // 4️⃣ rand() + thread id + time
+    int r4 = (rand() + std::hash<std::thread::id>{}(std::this_thread::get_id())) % 100;
+    std::cout << "Random 4: " << r4 << "\n";
 
-    if (rc == 1)
-        return ret;
-    else
-        return -1;
-}
-
-int get_random_dev_urandom()
-{
-    int ret, read;
-
-    FILE *urandom = fopen("/dev/urandom", "r");
-
-    read = fread(&ret, sizeof(ret), 1, urandom);
-
-    fclose(urandom);
-
-    if (read > 0)
-        return ret;
-    else
-        return -1;
-}
-
-int get_random_getrandom()
-{
-    int ret, read;
-
-    read = getrandom(&ret, sizeof(ret), 0);
-
-    if (read > 0)
-        return ret;
-    else
-        return read;
-}
-
-int get_random(int (*random_func)())
-{
-    return random_func() % 200;
-}
-
-typedef int (*fp)();
-
-int main()
-{
-    int n;
-
-    cout << "Please enter a number" << endl;
-    cin >> n;
-
-    uint32_t rnd;
-
-    srand((unsigned) time(NULL));
-
-    vector<fp> randoms = { get_random_getrandom, get_random_dev_urandom, get_random_rdrand, get_random_std };
-
-    for (int i = 0; i <= 5; i++)
-    {
-        if (get_random(randoms[i % 4]) == 150)
-        {
-            n += 1;
-        }
-        else
-        {
-            i--;
-        }
-    }
-
-    cout << "Your number + 5 is: " << n << endl;
+    // 5️⃣ Linear Congruential Generator simplu
+    unsigned long lcg = seed;
+    lcg = (lcg * 1664525 + 1013904223) % 100;
+    int r5 = static_cast<int>(lcg);
+    std::cout << "Random 5: " << r5 << "\n";
 
     return 0;
 }
